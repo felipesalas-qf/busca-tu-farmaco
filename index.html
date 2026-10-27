@@ -1,0 +1,230 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Busca tu fármaco</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: single centred column (max 720px); search → result card → market context. Phone-first: built to be opened from a poster QR. */
+:root{
+  --bg:#F5F7F7; --surface:#FFFFFF; --ink:#16252E; --muted:#5B6B72; --line:#DCE3E5;
+  --navy:#1F3A4D; --c1:#3A7780; --c2:#E8304F; --c3:#B9AF73; --c4:#8C8C8C;
+  --c1-soft:#DCEBEC; --c2-soft:#FCE1E6; --c3-soft:#F1EEDC; --c4-soft:#ECECEC;
+  --ok:#1E7A55; --ok-soft:#DDF1E8; --warn:#9A6A0B; --warn-soft:#FBF0D6; --none:#5B6B72; --none-soft:#E9EDEE;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1A20; --surface:#16252E; --ink:#E7EEF0; --muted:#9AAAB1; --line:#2A3B44;
+  --navy:#9CC3D6; --c1:#5FA9B3; --c2:#FF5C77; --c3:#D3CDA0; --c4:#A9A9A9;
+  --c1-soft:#173A3F; --c2-soft:#45182A; --c3-soft:#37351F; --c4-soft:#2C3236;
+  --ok:#5BD19E; --ok-soft:#163A2C; --warn:#F2C062; --warn-soft:#3B2F12; --none:#9AAAB1; --none-soft:#22313A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1A20; --surface:#16252E; --ink:#E7EEF0; --muted:#9AAAB1; --line:#2A3B44;
+  --navy:#9CC3D6; --c1:#5FA9B3; --c2:#FF5C77; --c3:#D3CDA0; --c4:#A9A9A9;
+  --c1-soft:#173A3F; --c2-soft:#45182A; --c3-soft:#37351F; --c4-soft:#2C3236;
+  --ok:#5BD19E; --ok-soft:#163A2C; --warn:#F2C062; --warn-soft:#3B2F12; --none:#9AAAB1; --none-soft:#22313A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,8vw,44px);line-height:1.02;margin:4px 0 6px;color:var(--navy);text-wrap:balance}
+.lede{color:var(--muted);margin:0;max-width:56ch}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex-shrink:0}
+.lang button{border:0;background:transparent;color:var(--muted);font:600 12px var(--body);padding:6px 11px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--navy);color:var(--bg)}
+.search{position:relative}
+.search label{display:block;font-weight:600;font-size:13px;margin-bottom:6px}
+.search input{width:100%;font:500 18px var(--body);padding:14px 16px;border:2px solid var(--navy);border-radius:12px;background:var(--surface);color:var(--ink);outline:none}
+.search input:focus-visible{box-shadow:0 0 0 4px color-mix(in srgb,var(--c1) 30%,transparent)}
+.sugg{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;list-style:none;padding:4px;margin-inline:0;z-index:5;box-shadow:0 10px 30px rgba(0,0,0,.12);max-height:280px;overflow:auto}
+.sugg li{padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.sugg li[aria-selected="true"],.sugg li:hover{background:var(--bg)}
+.sugg small{color:var(--muted);font-family:var(--mono);font-size:11px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.chips span{font-size:12px;color:var(--muted);margin-right:2px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 11px;font:500 13px var(--body);cursor:pointer}
+.chip:hover,.chip:focus-visible{border-color:var(--navy)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.verdict{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--body);padding:6px 12px;border-radius:999px;align-self:flex-start}
+.verdict::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.v-ok{background:var(--ok-soft);color:var(--ok)} .v-warn{background:var(--warn-soft);color:var(--warn)} .v-none{background:var(--none-soft);color:var(--none)}
+.name{font-family:var(--display);font-size:32px;font-weight:700;line-height:1.05;margin:0}
+.alt{color:var(--muted);font-size:13px;margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--display);font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.cls{display:inline-block;font:700 12px var(--body);padding:3px 9px;border-radius:6px}
+.k1{background:var(--c1-soft);color:var(--c1)} .k2{background:var(--c2-soft);color:var(--c2)} .k3{background:var(--c3-soft);color:var(--ink)} .k4{background:var(--c4-soft);color:var(--ink)}
+.rows{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:minmax(0,11rem) minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.row dt{color:var(--muted)} .row dd{margin:0;font-weight:500}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--c2);font-weight:600}
+.note{font-size:13px;color:var(--muted);background:var(--bg);border-radius:10px;padding:10px 12px;margin:0}
+.rankbar{position:relative;height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.rankbar i{position:absolute;inset:0 auto 0 0;border-radius:5px}
+h2{font-family:var(--display);font-size:22px;margin:0;color:var(--navy)}
+.stack{display:flex;height:34px;border-radius:8px;overflow:hidden}
+.stack div{display:flex;align-items:center;justify-content:center;font:600 12px var(--mono);color:#fff;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.grid{display:flex;flex-wrap:wrap;gap:6px}
+.grid button{border:0;border-radius:6px;padding:5px 9px;font:500 12.5px var(--body);cursor:pointer;color:var(--ink)}
+.grid button:focus-visible,.chip:focus-visible,.lang button:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.grid button.on{outline:2px solid var(--ink)}
+footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+footer a{color:var(--c1)}
+@media (max-width:480px){.row{grid-template-columns:1fr;gap:2px}.stat b{font-size:24px}.name{font-size:28px}}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease-out}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+</head><body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow" data-t="eyebrow"></div>
+      <h1 data-t="title"></h1>
+      <p class="lede" data-t="lede"></p>
+    </div>
+    <div class="lang" role="group" aria-label="Idioma / Language">
+      <button id="l-es" aria-pressed="true">ES</button><button id="l-en" aria-pressed="false">EN</button>
+    </div>
+  </header>
+
+  <div class="search">
+    <label for="q" data-t="label"></label>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list">
+    <ul class="sugg" id="sugg" role="listbox" hidden></ul>
+    <div class="chips" id="quick"></div>
+  </div>
+
+  <section class="card" id="result" aria-live="polite"></section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2 data-t="ctxTitle"></h2>
+    <p class="lede" data-t="ctxLede" style="font-size:14px"></p>
+    <div class="stack" id="stack" aria-label=""></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <h2 data-t="allTitle"></h2>
+    <p class="lede" data-t="allLede" style="font-size:14px"></p>
+    <div class="grid" id="all"></div>
+  </section>
+
+  <footer>
+    <div data-t="foot1"></div>
+    <div data-t="foot2"></div>
+    <div>Felipe Salas Martínez · Escuela de Química y Farmacia, Universidad San Sebastián · REDIF 2026, Santiago</div>
+  </footer>
+</div>
+<script>
+const DATA = {"inc":[{"es":"Metformina","en":"Metformin","c":3,"n":95,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":1},{"es":"Paracetamol","en":"Paracetamol","c":1,"n":91,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":2},{"es":"Quetiapina","en":"Quetiapine","c":2,"n":75,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"Caso de estudio de la memoria de título (25 mg IR)","nen":"Case study of the thesis (25 mg IR)","rank":3},{"es":"Pregabalina","en":"Pregabalin","c":1,"n":63,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"12-02-2028"},"be":true,"nes":"","nen":"","rank":4},{"es":"Rosuvastatina","en":"Rosuvastatin","c":2,"n":53,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":5},{"es":"Montelukast","en":"Montelukast","c":2,"n":50,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"Incluye comprimidos masticables y granulado oral","nen":"Includes chewable tablets and oral granules","rank":6},{"es":"Atorvastatina","en":"Atorvastatin","c":2,"n":42,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":7},{"es":"Aripiprazol","en":"Aripiprazole","c":2,"n":37,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":8},{"es":"Sildenafilo","en":"Sildenafil","c":2,"n":37,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":9},{"es":"Risperidona","en":"Risperidone","c":2,"n":35,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":10},{"es":"Tacrolimus","en":"Tacrolimus","c":2,"n":29,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":11},{"es":"Olanzapina","en":"Olanzapine","c":2,"n":26,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":12},{"es":"Paroxetina","en":"Paroxetine","c":1,"n":20,"lc":{"form":null,"status":"expired"},"lm":{"form":"DR","status":"expired"},"be":true,"nes":"","nen":"","rank":13},{"es":"Dabigatrán","en":"Dabigatran","c":2,"n":18,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":14},{"es":"Carbamazepina","en":"Carbamazepine","c":2,"n":17,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":15},{"es":"Ciclosporina","en":"Ciclosporin","c":2,"n":17,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":16},{"es":"Levonorgestrel","en":"Levonorgestrel","c":2,"n":17,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"Solo comprimidos; no se cuentan DIU ni implantes","nen":"Tablets only; intrauterine systems and implants not counted","rank":17},{"es":"Bupropión","en":"Bupropion","c":1,"n":16,"lc":null,"lm":{"form":"XR","status":"30-09-2027"},"be":true,"nes":"Solo listado para formas de liberación modificada","nen":"Listed only for modified-release forms","rank":18},{"es":"Claritromicina","en":"Clarithromycin","c":2,"n":16,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":19},{"es":"Metoprolol","en":"Metoprolol","c":1,"n":14,"lc":null,"lm":{"form":"XR","status":"27-11-2026"},"be":true,"nes":"Solo listado para formas de liberación modificada","nen":"Listed only for modified-release forms","rank":20},{"es":"Clopidogrel","en":"Clopidogrel","c":2,"n":13,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":21},{"es":"Dapagliflozina","en":"Dapagliflozin","c":3,"n":13,"lc":{"form":null,"status":"12-02-2028"},"lm":null,"be":true,"nes":"","nen":"","rank":22},{"es":"Fluconazol","en":"Fluconazole","c":1,"n":10,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":23},{"es":"Cabozantinib","en":"Cabozantinib","c":2,"n":9,"lc":null,"lm":null,"be":false,"nes":"No figura en los listados LC ni LM del ISP (feb-2026)","nen":"Not included in the Feb-2026 ISP LC or MR lists","rank":24},{"es":"Midazolam","en":"Midazolam","c":1,"n":8,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":25},{"es":"Gemfibrozilo","en":"Gemfibrozil","c":2,"n":7,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":26},{"es":"Voriconazol","en":"Voriconazole","c":2,"n":7,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":27},{"es":"Ácido mefenámico","en":"Mefenamic acid","c":2,"n":6,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":28},{"es":"Omeprazol","en":"Omeprazole","c":2,"n":6,"lc":null,"lm":{"form":"DR","status":"expired"},"be":true,"nes":"Solo listado para formas de liberación retardada","nen":"Listed only for modified-release (delayed-release) forms","rank":29},{"es":"Furosemida","en":"Furosemide","c":4,"n":6,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":30},{"es":"Alprazolam","en":"Alprazolam","c":1,"n":5,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"expired"},"be":true,"nes":"","nen":"","rank":31},{"es":"Moxifloxacino","en":"Moxifloxacin","c":1,"n":5,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":32},{"es":"Raltegravir","en":"Raltegravir","c":2,"n":5,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":33},{"es":"Metotrexato","en":"Methotrexate","c":3,"n":5,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":34},{"es":"Ruxolitinib","en":"Ruxolitinib","c":1,"n":4,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":35},{"es":"Teofilina","en":"Theophylline","c":1,"n":4,"lc":null,"lm":null,"be":false,"nes":"No figura en los listados LC ni LM del ISP (feb-2026)","nen":"Not included in the Feb-2026 ISP LC or MR lists","rank":36},{"es":"Itraconazol","en":"Itraconazole","c":2,"n":4,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":37},{"es":"Digoxina","en":"Digoxin","c":4,"n":4,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":38},{"es":"Verapamilo","en":"Verapamil","c":1,"n":3,"lc":{"form":null,"status":"expired"},"lm":{"form":"XR","status":"27-11-2026"},"be":true,"nes":"","nen":"","rank":39},{"es":"Repaglinida","en":"Repaglinide","c":2,"n":3,"lc":null,"lm":null,"be":false,"nes":"No figura en los listados LC ni LM del ISP (feb-2026)","nen":"Not included in the Feb-2026 ISP LC or MR lists","rank":40},{"es":"Lisinopril","en":"Lisinopril","c":3,"n":3,"lc":{"form":null,"status":"30-09-2027"},"lm":null,"be":true,"nes":"","nen":"","rank":41},{"es":"Finerenona","en":"Finerenone","c":1,"n":2,"lc":{"form":null,"status":"27-11-2026"},"lm":null,"be":true,"nes":"","nen":"","rank":42},{"es":"Isoniazida","en":"Isoniazid","c":1,"n":2,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":43},{"es":"Warfarina","en":"Warfarin","c":1,"n":2,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":44},{"es":"Ketoconazol","en":"Ketoconazole","c":2,"n":2,"lc":{"form":null,"status":"suspended"},"lm":null,"be":true,"nes":"Exigencia de BE suspendida en el listado ISP","nen":"BE requirement suspended in the ISP list","rank":45},{"es":"Nifedipino","en":"Nifedipine","c":2,"n":2,"lc":{"form":null,"status":"expired"},"lm":{"form":"OS","status":"30-09-2027"},"be":true,"nes":"","nen":"","rank":46},{"es":"Pitavastatina","en":"Pitavastatin","c":2,"n":2,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":47},{"es":"Rifampicina","en":"Rifampicin","c":2,"n":2,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":48},{"es":"Dextrometorfano","en":"Dextromethorphan","c":2,"n":2,"lc":null,"lm":null,"be":false,"nes":"No figura en los listados LC ni LM del ISP (feb-2026)","nen":"Not included in the Feb-2026 ISP LC or MR lists","rank":49},{"es":"Fluvoxamina","en":"Fluvoxamine","c":1,"n":1,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":50},{"es":"Tizanidina","en":"Tizanidine","c":1,"n":1,"lc":{"form":null,"status":"27-11-2026"},"lm":null,"be":true,"nes":"","nen":"","rank":51},{"es":"Atazanavir","en":"Atazanavir","c":2,"n":1,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":52},{"es":"Eritromicina","en":"Erythromycin","c":2,"n":1,"lc":{"form":null,"status":"30-09-2027"},"lm":null,"be":true,"nes":"","nen":"","rank":53},{"es":"Pirimetamina","en":"Pyrimethamine","c":2,"n":1,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":54},{"es":"Ritonavir","en":"Ritonavir","c":2,"n":1,"lc":{"form":null,"status":"expired"},"lm":null,"be":true,"nes":"","nen":"","rank":55},{"es":"Posaconazol","en":"Posaconazole","c":2,"n":1,"lc":null,"lm":null,"be":false,"nes":"No figura en los listados LC ni LM del ISP (feb-2026)","nen":"Not included in the Feb-2026 ISP LC or MR lists","rank":56}],"exc":[{"en":"Amoxicillin","es":"Amoxicilina","r":"iv"},{"en":"Clomiphene","es":"Clomifeno","r":"noreg"},{"en":"Efavirenz","es":"Efavirenz","r":"noreg"},{"en":"Ethinylestradiol","es":"Etinilestradiol","r":"combo"},{"en":"Griseofulvin","es":"Griseofulvina","r":"noreg"},{"en":"Pioglitazone","es":"Pioglitazona","r":"noreg"},{"en":"Trimethoprim","es":"Trimetoprima","r":"noreg"},{"en":"Ondansetron","es":"Ondansetrón","r":"empty"},{"en":"Oxycodone","es":"Oxicodona","r":"noreg"},{"en":"Vancomycin","es":"Vancomicina","r":"nooral"},{"en":"Valproic acid","es":"Ácido valproico","r":"nooral"},{"en":"Desipramine","es":"Desipramina","r":"noreg"},{"en":"Tocilizumab","es":"Tocilizumab","r":"mab"},{"en":"Moclobemide","es":"Moclobemida","r":"noreg"},{"en":"Moxidectin","es":"Moxidectina","r":"vet"},{"en":"Bedaquiline","es":"Bedaquilina","r":"noreg"},{"en":"Quinidine","es":"Quinidina","r":"noreg"},{"en":"Propofol","es":"Propofol","r":"iv"},{"en":"Atomoxetine","es":"Atomoxetina","r":"noreg"},{"en":"Probenecid","es":"Probenecid","r":"noreg"},{"en":"Felodipine","es":"Felodipino","r":"noreg"},{"en":"Triazolam","es":"Triazolam","r":"noreg"},{"en":"Sufentanil","es":"Sufentanilo","r":"iv"},{"en":"Cimetidine","es":"Cimetidina","r":"noreg"},{"en":"Alfentanil","es":"Alfentanilo","r":"iv"},{"en":"Mexiletine","es":"Mexiletina","r":"noreg"},{"en":"Amikacin","es":"Amikacina","r":"iv"},{"en":"Mephenytoin","es":"Mefenitoína","r":"noreg"},{"en":"Hydrocodone","es":"Hidrocodona","r":"noreg"},{"en":"Hydromorphone","es":"Hidromorfona","r":"noreg"},{"en":"Fentanyl","es":"Fentanilo","r":"iv"},{"en":"Tefibazumab","es":"Tefibazumab","r":"mab"},{"en":"Irinotecan","es":"Irinotecán","r":"iv"},{"en":"Buprenorphine","es":"Buprenorfina","r":"td"},{"en":"Idarucizumab","es":"Idarucizumab","r":"iv"},{"en":"Paclitaxel","es":"Paclitaxel","r":"iv"}]};
+const T = {
+ es:{eyebrow:"REDIF 2026 · Modelos PBPK de código abierto",title:"Busca tu fármaco",
+  lede:"¿Tu principio activo ya tiene un modelo PBPK gratuito de Open Systems Pharmacology (OSP) y productos registrados en Chile? Escríbelo y compruébalo.",
+  label:"Principio activo (español o inglés)",ph:"Ej.: quetiapina, metformina, atorvastatina…",try:"Prueba:",
+  ok:"Tiene modelo OSP oral",warn:"Hay modelo OSP, pero quedó fuera",none:"Sin modelo OSP oral en esta revisión",
+  products:"productos registrados",rank:"lugar entre 56",share:"del total (921)",
+  bcs:"Clase BCS",lc:"Listado ISP liberación convencional",lm:"Listado ISP liberación modificada",be:"Exigencia de BE vigente",
+  yes:"Sí",no:"No",notListed:"No figura",expired:"Exigencia vigente (plazo cumplido)",suspended:"Exigencia suspendida",until:"Plazo hasta ",
+  XR:"liberación prolongada",DR:"liberación retardada",OS:"liberación osmótica",
+  cls:["","Alta solubilidad · alta permeabilidad","Baja solubilidad · alta permeabilidad","Alta solubilidad · baja permeabilidad","Baja solubilidad · baja permeabilidad"],
+  c2hint:"En la clase II la disolución puede limitar la absorción; es donde la bioequivalencia virtual tiene más que aportar.",
+  reasons:{iv:"El modelo OSP solo tiene administración intravenosa.",noreg:"No tiene registro sanitario vigente en Chile.",combo:"En Chile solo se registra en asociaciones.",empty:"El repositorio del modelo estaba vacío al momento de la revisión.",nooral:"El modelo no incluye administración oral.",mab:"Anticuerpo monoclonal: no tiene formulación oral.",vet:"Uso veterinario: sin registro humano.",td:"Vía transdérmica: no hay modelo oral."},
+  noneTxt:"No aparece entre los 92 modelos OSP revisados. Puede que exista un modelo en otra plataforma o que OSP lo publique más adelante.",
+  ctxTitle:"Los 921 productos, por clase BCS",ctxLede:"Productos orales monocomponente con registro vigente en el ISP cuyos principios activos tienen modelo OSP oral.",
+  allTitle:"Los 56 principios activos",allLede:"Toca cualquiera para ver su ficha. El color indica la clase BCS.",
+  foot1:"Fuentes: repositorio Open Systems Pharmacology (GitHub); buscador de productos del ISP; listados ISP de exigencia de BE, febrero 2026.",
+  foot2:"Conteos: formas orales (sólidas y líquidas, cualquier liberación), monocomponente, registro vigente. Son una foto de 2026 y pueden cambiar.",
+  models:"modelos",cl:"Clase "},
+ en:{eyebrow:"REDIF 2026 · Open-source PBPK models",title:"Find your drug",
+  lede:"Does your active ingredient already have a free Open Systems Pharmacology (OSP) PBPK model and registered products in Chile? Type it and see.",
+  label:"Active ingredient (English or Spanish)",ph:"e.g. quetiapine, metformin, atorvastatin…",try:"Try:",
+  ok:"Has an oral OSP model",warn:"OSP model exists but was excluded",none:"No oral OSP model in this review",
+  products:"registered products",rank:"rank out of 56",share:"of all 921",
+  bcs:"BCS class",lc:"ISP list, conventional release",lm:"ISP list, modified release",be:"BE requirement in force",
+  yes:"Yes",no:"No",notListed:"Not listed",expired:"Requirement in force (deadline passed)",suspended:"Requirement suspended",until:"Deadline ",
+  XR:"extended release",DR:"delayed release",OS:"osmotic release",
+  cls:["","High solubility · high permeability","Low solubility · high permeability","High solubility · low permeability","Low solubility · low permeability"],
+  c2hint:"In class II, dissolution can limit absorption; this is where virtual bioequivalence has the most to offer.",
+  reasons:{iv:"The OSP model covers intravenous administration only.",noreg:"No current marketing authorisation in Chile.",combo:"Registered in Chile only in combination products.",empty:"The model repository was empty at the time of review.",nooral:"The model has no oral administration.",mab:"Monoclonal antibody: no oral formulation.",vet:"Veterinary use: no human registration.",td:"Transdermal route: no oral model."},
+  noneTxt:"Not among the 92 OSP models reviewed. A model may exist on another platform, or OSP may publish one later.",
+  ctxTitle:"All 921 products by BCS class",ctxLede:"Oral single-component products with current ISP registration whose active ingredient has an oral OSP model.",
+  allTitle:"All 56 active ingredients",allLede:"Tap any of them to see its profile. Colour shows the BCS class.",
+  foot1:"Sources: Open Systems Pharmacology repository (GitHub); ISP product registry; ISP BE requirement lists, February 2026.",
+  foot2:"Counts: oral forms (solid and liquid, any release type), single-component, current registration. A 2026 snapshot that may change.",
+  models:"models",cl:"Class "}
+};
+const ROMAN=["","I","II","III","IV"];
+let lang="es", current=null, sel=-1;
+try{const s=localStorage.getItem("lang"); if(s==="en"||s==="es") lang=s;}catch(e){}
+const norm=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+const ALL=[...DATA.inc.map(d=>({...d,kind:"inc"})),...DATA.exc.map(d=>({...d,kind:"exc"}))];
+const $=id=>document.getElementById(id);
+const TOTAL=DATA.inc.reduce((a,d)=>a+d.n,0);
+const nm=d=>lang==="es"?d.es:d.en, alt=d=>lang==="es"?d.en:d.es;
+function status(x){const t=T[lang]; if(!x) return `<span>${t.notListed}</span>`;
+  let s=x.status==="expired"?t.expired:x.status==="suspended"?t.suspended:t.until+x.status;
+  return (x.form?`<span style="color:var(--muted)">${t[x.form]} · </span>`:"")+s;}
+function render(d){
+  current=d; const t=T[lang], r=$("result");
+  if(!d){r.innerHTML=`<span class="verdict v-none">${t.none}</span><p class="name">${esc($("q").value)}</p><p class="note">${t.noneTxt}</p>`;return;}
+  if(d.kind==="exc"){r.innerHTML=`<span class="verdict v-warn">${t.warn}</span><div><p class="name">${nm(d)}</p><div class="alt">${alt(d)}</div></div><p class="note">${t.reasons[d.r]}</p>`;return;}
+  const pct=lang==='es'?(d.n/TOTAL*100).toFixed(1).replace('.',',')+' ':(d.n/TOTAL*100).toFixed(1), max=DATA.inc[0].n;
+  r.innerHTML=`<span class="verdict v-ok">${t.ok}</span>
+  <div><p class="name">${nm(d)}</p><div class="alt">${alt(d)}</div></div>
+  <div class="stats">
+    <div class="stat"><b>${d.n}</b><span>${t.products}</span></div>
+    <div class="stat"><b>#${d.rank}</b><span>${t.rank}</span></div>
+    <div class="stat"><b>${pct}%</b><span>${t.share}</span></div>
+  </div>
+  <div class="rankbar" role="img" aria-label="${d.n} / ${max}"><i style="width:${d.n/max*100}%;background:var(--c${d.c})"></i></div>
+  <dl class="rows">
+    <div class="row"><dt>${t.bcs}</dt><dd><span class="cls k${d.c}">${t.cl}${ROMAN[d.c]}</span> <span style="color:var(--muted);font-weight:400">${t.cls[d.c]}</span></dd></div>
+    <div class="row"><dt>${t.lc}</dt><dd>${status(d.lc)}</dd></div>
+    <div class="row"><dt>${t.lm}</dt><dd>${status(d.lm)}</dd></div>
+    <div class="row"><dt>${t.be}</dt><dd class="${d.be?"yes":"no"}">${d.be?t.yes:t.no}</dd></div>
+  </dl>
+  ${(lang==="es"?d.nes:d.nen)?`<p class="note">${lang==="es"?d.nes:d.nen}</p>`:""}
+  ${d.c===2?`<p class="note" style="border-left:3px solid var(--c2)">${t.c2hint}</p>`:""}`;
+  document.querySelectorAll("#all button").forEach(b=>b.classList.toggle("on",b.dataset.es===d.es));
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function matches(q){q=norm(q); if(!q) return [];
+  return ALL.map(d=>{const a=norm(d.es),b=norm(d.en);const s=(a.startsWith(q)||b.startsWith(q))?0:(a.includes(q)||b.includes(q))?1:9;return [s,d]})
+   .filter(x=>x[0]<9).sort((x,y)=>x[0]-y[0]||(y[1].n||0)-(x[1].n||0)).slice(0,8).map(x=>x[1]);}
+function showSugg(){const list=matches($("q").value), u=$("sugg"); sel=-1;
+  if(!list.length){u.hidden=true;$("q").setAttribute("aria-expanded","false");return;}
+  u.innerHTML=list.map((d,i)=>`<li role="option" id="o${i}" aria-selected="false" data-i="${ALL.indexOf(d)}"><span>${nm(d)}</span><small>${d.kind==="inc"?T[lang].cl+ROMAN[d.c]+" · "+d.n:"—"}</small></li>`).join("");
+  u.hidden=false;$("q").setAttribute("aria-expanded","true");}
+function pick(d){$("sugg").hidden=true;$("q").setAttribute("aria-expanded","false");$("q").value=nm(d);render(d);}
+$("q").addEventListener("input",showSugg);
+$("q").addEventListener("keydown",e=>{const u=$("sugg"),items=[...u.querySelectorAll("li")];
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){if(u.hidden||!items.length)return;e.preventDefault();
+    sel=(sel+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;items.forEach((li,i)=>li.setAttribute("aria-selected",i===sel));$("q").setAttribute("aria-activedescendant","o"+sel);}
+  else if(e.key==="Enter"){e.preventDefault();const m=matches($("q").value);
+    if(sel>=0&&items[sel]) pick(ALL[+items[sel].dataset.i]); else if(m.length) pick(m[0]); else {u.hidden=true;render(null);}}
+  else if(e.key==="Escape"){u.hidden=true;}});
+$("sugg").addEventListener("mousedown",e=>{const li=e.target.closest("li");if(li){e.preventDefault();pick(ALL[+li.dataset.i]);}});
+$("q").addEventListener("blur",()=>setTimeout(()=>{$("sugg").hidden=true},120));
+function paint(){const t=T[lang];document.documentElement.lang=lang;
+  document.querySelectorAll("[data-t]").forEach(el=>el.textContent=t[el.dataset.t]);
+  $("q").placeholder=t.ph; $("l-es").setAttribute("aria-pressed",lang==="es"); $("l-en").setAttribute("aria-pressed",lang==="en");
+  const q=["Quetiapina","Metformina","Atorvastatina","Omeprazol","Amoxicilina"].map(es=>ALL.find(d=>d.es===es));
+  $("quick").innerHTML=`<span>${t.try}</span>`+q.map(d=>`<button class="chip" data-i="${ALL.indexOf(d)}">${nm(d)}</button>`).join("");
+  const by=[1,2,3,4].map(c=>({c,n:DATA.inc.filter(d=>d.c===c).reduce((a,d)=>a+d.n,0),m:DATA.inc.filter(d=>d.c===c).length}));
+  $("stack").innerHTML=by.map(b=>`<div style="flex:${b.n};background:var(--c${b.c})" title="${t.cl}${ROMAN[b.c]}: ${b.n}">${b.n>=60?b.n:""}</div>`).join("");
+  $("stack").setAttribute("aria-label",by.map(b=>`${t.cl}${ROMAN[b.c]} ${b.n}`).join(", "));
+  $("legend").innerHTML=by.map(b=>`<span><i style="background:var(--c${b.c})"></i>${t.cl}${ROMAN[b.c]} · ${b.n} · ${b.m} ${t.models}</span>`).join("");
+  $("all").innerHTML=[...DATA.inc].sort((a,b)=>a.c-b.c||b.n-a.n).map(d=>`<button class="k${d.c}" data-es="${d.es}">${nm(d)} <span style="opacity:.7;font-family:var(--mono);font-size:11px">${d.n}</span></button>`).join("");
+  if(current!==undefined){ if(current){ $("q").value=nm(current);} render(current);} }
+$("quick").addEventListener("click",e=>{const b=e.target.closest("button");if(b)pick(ALL[+b.dataset.i]);});
+$("all").addEventListener("click",e=>{const b=e.target.closest("button");if(b){pick(DATA.inc.map(d=>({...d,kind:"inc"})).find(d=>d.es===b.dataset.es));window.scrollTo({top:0,behavior:"smooth"});}});
+function setLang(l){lang=l;try{localStorage.setItem("lang",l)}catch(e){};paint();}
+$("l-es").onclick=()=>setLang("es");$("l-en").onclick=()=>setLang("en");
+current=ALL.find(d=>d.es==="Quetiapina"); paint();
+</script>
+</body></html>
